@@ -1,13 +1,14 @@
 """펨코 포텐 게시판(최신순) 상위 N개 게시물에서 베스트 댓글 상위 K개를 수집한다."""
 
-import json
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import requests
 from bs4 import BeautifulSoup
+
+from feed_store import merge_into_feed
 
 BASE = "https://www.fmkorea.com"
 HEADERS = {
@@ -18,10 +19,23 @@ HEADERS = {
 POST_LIMIT = 10
 COMMENT_LIMIT = 4
 DELAY_SEC = 5  # 펨코 요청 제한이 엄격해서 넉넉히 둔다
-FEED_PATH = "feed.json"  # 실행할 때마다 누적되는 피드 저장소
 
 session = requests.Session()
 session.headers.update(HEADERS)
+
+
+def parse_date(text, now):
+    """펨코 날짜 표기("10 분 전", "3 시간 전", "2026.09.27")를 ISO 시각으로 바꾼다."""
+    text = text.strip()
+    if m := re.match(r"(\d+)\s*초 전", text):
+        return (now - timedelta(seconds=int(m[1]))).isoformat(timespec="seconds")
+    if m := re.match(r"(\d+)\s*분 전", text):
+        return (now - timedelta(minutes=int(m[1]))).isoformat(timespec="seconds")
+    if m := re.match(r"(\d+)\s*시간 전", text):
+        return (now - timedelta(hours=int(m[1]))).isoformat(timespec="seconds")
+    if m := re.match(r"(\d{4})\.(\d{2})\.(\d{2})", text):
+        return datetime(int(m[1]), int(m[2]), int(m[3])).isoformat(timespec="seconds")
+    return None
 
 
 class Blocked(Exception):
@@ -69,45 +83,24 @@ def get_best_comments(post_url):
                 parent.decompose()
         votes = li.select_one(".voted_count")
         author = li.select_one(".meta .member_plate")
+        date = li.select_one(".meta .date")
         comments[cid] = {
             "id": cid,
             "author": author.get_text(strip=True) if author else "",
             "content": content.get_text("\n", strip=True) if content else "",
             "votes": int(votes.get_text(strip=True) or 0) if votes else 0,
             "url": f"{post_url}/{cid}#comment_{cid}",
+            "created_at": parse_date(date.get_text(), datetime.now()) if date else None,
         }
     ranked = sorted(comments.values(), key=lambda c: c["votes"], reverse=True)
     return ranked[:COMMENT_LIMIT]
 
 
-def load_feed():
-    try:
-        with open(FEED_PATH, encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
-
-
 def main():
     try:
-        new_items = collect()
+        merge_into_feed(collect())
     except Blocked as e:
         sys.exit(f"[중단] {e}")
-
-    # 기존 피드에 누적: 이미 있는 댓글은 추천수만 갱신, 새 댓글은 추가
-    feed = {item["id"]: item for item in load_feed()}
-    added = 0
-    for item in new_items:
-        if item["id"] in feed:
-            feed[item["id"]]["votes"] = item["votes"]
-        else:
-            feed[item["id"]] = item
-            added += 1
-
-    with open(FEED_PATH, "w", encoding="utf-8") as f:
-        json.dump(list(feed.values()), f, ensure_ascii=False, indent=2)
-
-    print(f"새 댓글 {added}개 추가, 총 {len(feed)}개")
 
 
 def collect():
@@ -127,6 +120,7 @@ def collect():
                 "source": "fmkorea",
                 "content": c["content"],
                 "votes": c["votes"],
+                "created_at": c["created_at"],
                 "post_url": post["url"],
                 "collected_at": now,
             })

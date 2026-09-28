@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>POPCORNMENT</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍿</text></svg>">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #101010;
+    --muted: #8a8a8a;
+    --line: #e7e7e7;
+    --field: #f6f6f6;
+    --accent: #101010;
+    --accent-fg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101010;
+      --fg: #f3f5f7;
+      --muted: #777777;
+      --line: #2a2a2a;
+      --field: #1a1a1a;
+      --accent: #f3f5f7;
+      --accent-fg: #101010;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 24px 16px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .box { width: 100%; max-width: 320px; text-align: center; }
+  .logo { font-size: 56px; line-height: 1; }
+  h1 { margin: 12px 0 4px; font-size: 22px; letter-spacing: 0.02em; }
+  .tagline { margin: 0 0 28px; color: var(--muted); font-size: 14px; }
+  input[type="password"] {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--field);
+    color: var(--fg);
+    font: inherit; font-size: 16px;
+    text-align: center;
+    outline: none;
+  }
+  input[type="password"]:focus { border-color: var(--muted); }
+  button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 13px 14px;
+    border: none; border-radius: 12px;
+    background: var(--accent); color: var(--accent-fg);
+    font: inherit; font-size: 16px; font-weight: 600;
+    cursor: pointer;
+  }
+  button:active { opacity: 0.85; }
+  .error { display: none; margin-top: 12px; color: #e5484d; font-size: 14px; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">🍿</div>
+    <h1>POPCORNMENT</h1>
+    <p class="tagline">Just the comments. Spill the tea yourself.</p>
+    <form method="POST" action="/api/login">
+      <input type="password" name="password" placeholder="PASSWORD" autofocus required>
+      <button type="submit">Grab the popcorn</button>
+    </form>
+    <p class="error" id="err">Wrong password. Try again.</p>
+  </div>
+  <script>
+    if (new URLSearchParams(location.search).get("error")) {
+      document.getElementById("err").style.display = "block";
+    }
+  </script>
+</body>
+</html>

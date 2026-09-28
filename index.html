@@ -55,13 +55,14 @@
   .avatar {
     flex: none;
     width: 36px; height: 36px; border-radius: 50%;
+    overflow: hidden;
     background: var(--chip);
     display: grid; place-items: center;
     font-size: 18px;
   }
+  .avatar svg { width: 100%; height: 100%; display: block; }
   .body { min-width: 0; flex: 1; }
   .meta { display: flex; gap: 6px; align-items: baseline; font-size: 14px; margin-bottom: 3px; }
-  .source { font-weight: 600; }
   .time { color: var(--muted); }
   .content {
     font-size: 15px; line-height: 1.5;
@@ -76,14 +77,19 @@
 <main id="feed"><div class="status">불러오는 중…</div></main>
 
 <script>
-const SOURCE_NAMES = { fmkorea: "펨코" };
+// 출처는 이름 대신 아이콘으로만 표시 (간단한 자체 제작 SVG, 추후 정식 로고로 교체 가능)
+const SOURCE_ICONS = {
+  youtube: `<svg viewBox="0 0 36 36" aria-label="YouTube"><rect width="36" height="36" fill="#FF0000"/><path d="M14.5 12.5v11l9-5.5z" fill="#fff"/></svg>`,
+  naver: `<svg viewBox="0 0 36 36" aria-label="Naver"><rect width="36" height="36" fill="#03C75A"/><path d="M12 11h4.2l3.6 5.4V11H24v14h-4.2l-3.6-5.4V25H12z" fill="#fff"/></svg>`,
+  fmkorea: `<svg viewBox="0 0 36 36" aria-label="FMKorea"><rect width="36" height="36" fill="#3B5998"/><text x="18" y="23" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#fff">fm</text></svg>`,
+};
 
 function timeAgo(iso) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return "방금";
-  if (diff < 3600) return `${Math.floor(diff / 60)}분`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}시간`;
-  return `${Math.floor(diff / 86400)}일`;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
 }
 
 function render(items) {
@@ -92,8 +98,9 @@ function render(items) {
     feed.innerHTML = '<div class="status">아직 모인 댓글이 없어요.</div>';
     return;
   }
-  // 최근 수집분이 위로, 같은 수집분 안에서는 추천이 많은 댓글이 위로 (추천수는 화면에 노출하지 않음)
-  items.sort((a, b) => b.collected_at.localeCompare(a.collected_at) || b.votes - a.votes);
+  // 댓글 작성 시각이 최근인 것이 위로 (작성 시각을 모르면 수집 시각 사용)
+  const timeOf = item => new Date(item.created_at || item.collected_at).getTime();
+  items.sort((a, b) => timeOf(b) - timeOf(a));
   feed.replaceChildren(...items.map(item => {
     const a = document.createElement("a");
     a.className = "item";
@@ -101,14 +108,13 @@ function render(items) {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.innerHTML = `
-      <div class="avatar">🍿</div>
+      <div class="avatar">${SOURCE_ICONS[item.source] || "🍿"}</div>
       <div class="body">
-        <div class="meta"><span class="source"></span><span class="time"></span></div>
+        <div class="meta"><span class="time"></span></div>
         <div class="content"></div>
-        <div class="hint">무슨 글이길래? →</div>
+        <div class="hint">What's the tea? ☕</div>
       </div>`;
-    a.querySelector(".source").textContent = SOURCE_NAMES[item.source] || item.source;
-    a.querySelector(".time").textContent = timeAgo(item.collected_at);
+    a.querySelector(".time").textContent = timeAgo(item.created_at || item.collected_at);
     a.querySelector(".content").textContent = item.content;
     return a;
   }));
