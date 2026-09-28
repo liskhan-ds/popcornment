@@ -36,8 +36,8 @@ def load_api_key():
 def get_videos(key):
     res = requests.get(f"{API}/videos", params={
         "part": "id", "chart": "mostPopular", "regionCode": REGION,
-        "maxResults": VIDEO_LIMIT, "key": key,
-    }, timeout=10)
+        "maxResults": VIDEO_LIMIT,
+    }, headers={"X-Goog-Api-Key": key}, timeout=10)
     res.raise_for_status()
     return [item["id"] for item in res.json().get("items", [])]
 
@@ -45,8 +45,8 @@ def get_videos(key):
 def get_top_comments(key, video_id):
     res = requests.get(f"{API}/commentThreads", params={
         "part": "snippet", "videoId": video_id, "order": "relevance",
-        "maxResults": 20, "textFormat": "plainText", "key": key,
-    }, timeout=10)
+        "maxResults": 20, "textFormat": "plainText",
+    }, headers={"X-Goog-Api-Key": key}, timeout=10)
     if res.status_code == 403:  # 댓글이 꺼진 영상
         return []
     res.raise_for_status()

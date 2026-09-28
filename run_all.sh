@@ -4,6 +4,13 @@ cd "$(dirname "$0")" || exit 1
 PYTHON=/Library/Frameworks/Python.framework/Versions/3.14/bin/python3
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') ====="
+
+# 잠자기에서 깨어난 직후엔 네트워크가 아직 없을 수 있으므로 최대 5분 기다린다
+for i in $(seq 1 30); do
+  curl -s -o /dev/null --max-time 5 https://www.google.com && break
+  echo "네트워크 대기 중... ($i)"
+  sleep 10
+done
 # 한 소스가 실패(예: 펨코 차단)해도 나머지는 계속 진행
 for src in naver_news youtube fmkorea; do
   echo "--- $src"
